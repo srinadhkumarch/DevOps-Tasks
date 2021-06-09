@@ -1,0 +1,51 @@
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: slack-api
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: slack-api
+      tier: frontend
+  listeners:
+    - portMapping:
+        port: 80
+        protocol: http
+  serviceDiscovery:
+    dns:
+      hostname: slack-api.prod-v2.svc.cluster.local
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualRouter
+metadata:
+  namespace: default
+  name: slack-api-virtual-router
+spec:
+  listeners:
+    - portMapping:
+        port: 80
+        protocol: http
+  routes:
+    - name: slack-api-route
+      httpRoute:
+        match:
+          prefix: /
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: slack-api
+              weight: 1
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: slack-api
+  namespace: default
+spec:
+  awsName: slack-api.prod-v2.svc.cluster.local
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: slack-api-virtual-router
+---

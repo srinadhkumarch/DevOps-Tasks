@@ -1,0 +1,31 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slack-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: slack-api
+      tier: frontend
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: slack-api
+        tier: frontend
+    spec:
+      containers:
+        - name: slack-api
+          image: nginx
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 250m
+            limits:
+              cpu: 550m

@@ -1,0 +1,118 @@
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: lanistar-devops
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lanistar-devops-api
+  namespace: lanistar-devops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: lanistar-devops-api
+      tier: frontend
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: lanistar-devops-api
+        tier: frontend
+    spec:
+      containers:
+        - name: lanistar-devops-api
+          image: 32518/nginx-devops:d1
+          securityContext:
+            runAsUser: 5000
+            runAsNonRoot: true
+          volumeMounts:
+            - name: api-key
+              mountPath: "/etc/api_key"
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 250m
+            limits:
+              cpu: 550m
+      volumes:
+        - name: api-key
+          secret:
+            secretName: api-key
+      serviceAccount: devops-key
+      serviceAccountName: devops-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lanistar-devops-api
+  namespace: lanistar-devops
+  labels:
+    app: lanistar-devops-api
+    tier: frontend
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: lanistar-devops-api
+    tier: frontend
+---
+kind: HorizontalPodAutoscaler
+apiVersion: autoscaling/v2beta1
+metadata:
+  name: lanistar-devops-api
+  namespace: lanistar-devops
+spec:
+  scaleTargetRef:
+    kind: Deployment
+    name: lanistar-devops-api
+    apiVersion: apps/v1
+  minReplicas: 2
+  maxReplicas: 12
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 75
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-key
+  namespace: lanistar-devops
+data:
+  value: RGV2T3Bz
+type: Opaque
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: devops-key
+  namespace: lanistar-devops
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: lanistar-devops
+  name: lanistar-pod-role
+rules:
+- apiGroups: [""] 
+  resources: ["secrets"]
+  verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: lanistar-role-binding
+  namespace: lanistar-devops
+roleRef:
+  kind: Role 
+  name: lanistar-pod-role
+  apiGroup: rbac.authorization.k8s.io

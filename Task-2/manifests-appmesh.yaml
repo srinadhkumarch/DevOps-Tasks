@@ -1,0 +1,51 @@
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualNode
+metadata:
+  name: lanistar-devops-api
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: lanistar-devops-api
+      tier: frontend
+  listeners:
+    - portMapping:
+        port: 80
+        protocol: http
+  serviceDiscovery:
+    dns:
+      hostname: lanistar-devops-api.prod-v2.svc.cluster.local
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualRouter
+metadata:
+  namespace: default
+  name: lanistar-devops-api-virtual-router
+spec:
+  listeners:
+    - portMapping:
+        port: 80
+        protocol: http
+  routes:
+    - name: lanistar-devops-api-route
+      httpRoute:
+        match:
+          prefix: /
+        action:
+          weightedTargets:
+            - virtualNodeRef:
+                name: lanistar-devops-api
+              weight: 1
+---
+apiVersion: appmesh.k8s.aws/v1beta2
+kind: VirtualService
+metadata:
+  name: lanistar-devops-api
+  namespace: default
+spec:
+  awsName: lanistar-devops-api.prod-v2.svc.cluster.local
+  provider:
+    virtualRouter:
+      virtualRouterRef:
+        name: lanistar-devops-api-virtual-router
+---
