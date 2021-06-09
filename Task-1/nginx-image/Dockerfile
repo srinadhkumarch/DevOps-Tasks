@@ -15,7 +15,7 @@ RUN chown -R 5000:0 /var/cache/nginx     && \
     chmod -R g+w /var/cache/nginx     && chown -R 5000:0 /etc/nginx     && chmod -R g+w /etc/nginx
 
 USER devops
-EXPOSE 8080
+
 COPY index.html /usr/share/nginx/html
 
 
